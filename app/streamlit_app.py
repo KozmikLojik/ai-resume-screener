@@ -1,41 +1,38 @@
-import streamlit as st
+import os
+
 import requests
-import PyPDF2
-from io import BytesIO
+import streamlit as st
 
 st.set_page_config(page_title="AI Resume Screener", layout="centered")
 st.title("AI Resume Screener")
-st.markdown("### *Upload Resume + Paste JD → Get Match %*")
+st.markdown("### Upload a resume and compare it with a job description")
 
-# API URL (change after deployment)
-API_URL = "http://localhost:8000/match"  # Change to Render URL later
+api_url = os.getenv("RESUME_API_URL", "http://127.0.0.1:8000").rstrip("/") + "/match"
+resume_file = st.file_uploader("Resume (PDF)", type=["pdf"])
+job_description = st.text_area("Job description", height=200)
 
-col1, col2 = st.columns(2)
-
-with col1:
-    resume_file = st.file_uploader("Upload Resume (PDF)", type="pdf")
-with col2:
-    jd_text = st.text_area("Paste Job Description", height=200)
-
-if st.button("Match Resume", type="primary"):
-    if resume_file and jd_text:
-        with st.spinner("Analyzing..."):
-            files = {"resume": (resume_file.name, resume_file.getvalue(), "application/pdf")}
-            data = {"job_description": jd_text}
-            try:
-                response = requests.post(API_URL, files=files, data=data)
-                if response.status_code == 200:
-                    score = response.json()["match_score"]
-                    st.success(f"Match Score: **{score}%**")
-                    if score > 80:
-                        st.balloons()
-                    elif score > 60:
-                        st.info("Moderate match")
-                    else:
-                        st.warning("Low match")
-                else:
-                    st.error("API Error")
-            except:
-                st.error("Cannot connect to API. Run `python run_api.py` first.")
+if st.button("Match resume", type="primary"):
+    if not resume_file or not job_description.strip():
+        st.warning("Upload a PDF resume and enter a job description.")
     else:
-        st.warning("Please upload resume and paste JD")
+        with st.spinner("Analyzing the resume…"):
+            files = {"resume": (resume_file.name, resume_file.getvalue(), "application/pdf")}
+            try:
+                response = requests.post(
+                    api_url,
+                    files=files,
+                    data={"job_description": job_description},
+                    timeout=(5, 90),
+                )
+                response.raise_for_status()
+                score = float(response.json()["match_score"])
+                if not 0 <= score <= 100:
+                    raise ValueError("The API returned an invalid score.")
+            except requests.HTTPError as error:
+                detail = error.response.json().get("detail", "The resume could not be analyzed.")
+                st.error(detail)
+            except (requests.RequestException, ValueError, KeyError) as error:
+                st.error(f"Could not analyze the resume: {error}")
+            else:
+                st.metric("Resume match", f"{score:.1f}%")
+                st.caption("This score is an automated similarity estimate, not a hiring recommendation.")

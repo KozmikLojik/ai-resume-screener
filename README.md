@@ -25,6 +25,18 @@ The API listens on `http://127.0.0.1:8000`. The Streamlit app uses `RESUME_API_U
 
 Resume uploads are limited to 10 MB, validated as PDFs, and processed in memory. The API does not keep uploaded files.
 
+## Deployment configuration
+
+Deploy the API and Streamlit interface as separate services. For a container host such as Render, build the API with `deploy/Dockerfile`; the image binds to `0.0.0.0` and uses the host-provided `PORT` when available. Configure these variables in the hosting provider:
+
+| Service | Variable | Value |
+| --- | --- | --- |
+| API | `CORS_ORIGINS` | The exact public Streamlit app origin, for example `https://your-app.streamlit.app` |
+| API | `HOST` | `0.0.0.0` (already set by the Docker image) |
+| Streamlit | `RESUME_API_URL` | The public API base URL, without `/match`, for example `https://your-api.onrender.com` |
+
+The API loads the sentence-transformer model when the service starts. Allow time and memory for the model download and initialization. Do not expose resume contents or secrets in logs. A successful build or `/health` response alone does not verify the upload-to-report workflow; test that workflow before sharing the deployment.
+
 ## Docker
 
 Build and run the API container from the repository root:

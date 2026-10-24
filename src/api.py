@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated
 
@@ -13,6 +14,7 @@ MAX_PDF_BYTES = 10 * 1024 * 1024
 MAX_TEXT_LENGTH = 200_000
 
 app = FastAPI(title="AI Resume Screener API", version="1.0.0")
+logger = logging.getLogger(__name__)
 allowed_origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501").split(",")
@@ -50,8 +52,15 @@ async def match_resume(
         resume_text = extract_text_from_pdf(content)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception as error:
+        logger.error("PDF extraction failed unexpectedly (%s)", type(error).__name__)
+        raise HTTPException(status_code=500, detail="The uploaded resume could not be processed.") from None
     if len(resume_text) > MAX_TEXT_LENGTH:
         raise HTTPException(status_code=413, detail="The extracted resume text is too long to analyze.")
 
-    score = match_resume_to_jd(resume_text, job_description)
+    try:
+        score = match_resume_to_jd(resume_text, job_description)
+    except Exception as error:
+        logger.error("Resume matching failed unexpectedly (%s)", type(error).__name__)
+        raise HTTPException(status_code=500, detail="Resume matching is temporarily unavailable.") from None
     return {"match_score": score, "status": "success"}

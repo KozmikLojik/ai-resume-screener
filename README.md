@@ -25,6 +25,16 @@ The API listens on `http://127.0.0.1:8000`. The Streamlit app uses `RESUME_API_U
 
 Resume uploads are limited to 10 MB, validated as PDFs, and processed in memory. The API does not keep uploaded files.
 
+## Tests
+
+After installing the requirements and activating the virtual environment, run:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests use synthetic PDF content and mocked embeddings; they do not process personal résumés or evaluate real-world model accuracy.
+
 ## Deployment configuration
 
 Deploy the API and Streamlit interface as separate services. For a container host such as Render, build the API with `deploy/Dockerfile`; the image binds to `0.0.0.0` and uses the host-provided `PORT` when available. Configure these variables in the hosting provider:

@@ -1,5 +1,9 @@
 """Small synthetic PDF fixtures for parser and API tests."""
 
+from io import BytesIO
+
+from PyPDF2 import PdfWriter
+
 
 def make_pdf(text: str = "Python data analysis") -> bytes:
     stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET\n".encode("ascii") if text else b"q Q\n"
@@ -27,3 +31,21 @@ def make_pdf(text: str = "Python data analysis") -> bytes:
         f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
     )
     return bytes(pdf)
+
+
+def make_encrypted_pdf() -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    writer.encrypt("synthetic-test-password")
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
+
+
+def make_multipage_pdf(page_count: int) -> bytes:
+    writer = PdfWriter()
+    for _ in range(page_count):
+        writer.add_blank_page(width=612, height=792)
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()

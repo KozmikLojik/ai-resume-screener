@@ -23,7 +23,13 @@ streamlit run app/streamlit_app.py
 
 The API listens on `http://127.0.0.1:8000`. The Streamlit app uses `RESUME_API_URL` if set; otherwise it connects to that local API. The interactive API docs are available at `/docs`.
 
-Resume uploads are limited to 10 MB, validated as PDFs, and processed in memory. The API does not keep uploaded files.
+Resume uploads are limited to 10 MB and validated as PDFs. The API does not retain uploaded files after the request; bounded temporary spooling is described below.
+
+## Upload limits and operational safeguards
+
+The API accepts PDF files up to 10 MB, job descriptions up to 200,000 UTF-8 bytes, and PDFs with up to 100 pages. The `/match` request body is capped at the file limit plus the job-description limit and multipart overhead. Request bodies are spooled to a temporary file after 64 KB and the spool is closed after the request. The parser rejects encrypted, unreadable, and textless PDFs with client errors.
+
+These application limits reduce per-request work; they are not complete protection against malicious PDFs or many concurrent requests. The service has no per-IP rate limiter. Configure request-rate limits and concurrency, memory, CPU, and request-time limits at the hosting or reverse-proxy layer. A shared rate-limit store would be needed for consistent limits across multiple app instances. Keep the service isolated and monitor temporary-disk capacity.
 
 ## Tests
 

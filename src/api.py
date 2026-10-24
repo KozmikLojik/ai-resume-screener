@@ -9,9 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .matcher import match_resume_to_jd
 from .pdf_parser import extract_text_from_pdf
+from .request_limits import RequestSizeLimitMiddleware
 
 MAX_PDF_BYTES = 10 * 1024 * 1024
 MAX_TEXT_LENGTH = 200_000
+MAX_JOB_DESCRIPTION_BYTES = 200_000
+MAX_MULTIPART_OVERHEAD_BYTES = 64 * 1024
+MAX_REQUEST_BYTES = MAX_PDF_BYTES + MAX_JOB_DESCRIPTION_BYTES + MAX_MULTIPART_OVERHEAD_BYTES
 
 app = FastAPI(title="AI Resume Screener API", version="1.0.0")
 logger = logging.getLogger(__name__)
@@ -20,6 +24,8 @@ allowed_origins = [
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501").split(",")
     if origin.strip()
 ]
+# Register the body limit first so CORS wraps it and browser clients can read 413 responses.
+app.add_middleware(RequestSizeLimitMiddleware, max_bytes=MAX_REQUEST_BYTES)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -40,9 +46,13 @@ async def match_resume(
 ) -> dict[str, float | str]:
     if not job_description.strip():
         raise HTTPException(status_code=400, detail="A job description is required.")
+    if len(job_description.encode("utf-8")) > MAX_JOB_DESCRIPTION_BYTES:
+        raise HTTPException(status_code=413, detail="Job description exceeds the 200 KB limit.")
 
-    content = await resume.read(MAX_PDF_BYTES + 1)
-    await resume.close()
+    try:
+        content = await resume.read(MAX_PDF_BYTES + 1)
+    finally:
+        await resume.close()
     if len(content) > MAX_PDF_BYTES:
         raise HTTPException(status_code=413, detail="Resume PDF must be 10 MB or smaller.")
     if not content.startswith(b"%PDF-"):

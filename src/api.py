@@ -42,9 +42,9 @@ def health() -> dict[str, str]:
 @app.post("/match")
 async def match_resume(
     resume: Annotated[UploadFile, File(...)],
-    job_description: Annotated[str, Form(...)],
+    job_description: Annotated[str | None, Form()] = None,
 ) -> dict[str, float | str]:
-    if not job_description.strip():
+    if job_description is None or not job_description.strip():
         raise HTTPException(status_code=400, detail="A job description is required.")
     if len(job_description.encode("utf-8")) > MAX_JOB_DESCRIPTION_BYTES:
         raise HTTPException(status_code=413, detail="Job description exceeds the 200 KB limit.")

@@ -99,12 +99,17 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 422)
         self.assertIn("detail", body)
 
-    def test_missing_job_description_returns_validation_error(self):
+    def test_missing_job_description_returns_bad_request(self):
         status, body = post_match(files=[("resume", *self.valid_file)])
-        self.assertEqual(status, 422)
-        self.assertIn("detail", body)
+        self.assertEqual(status, 400)
+        self.assertEqual(body["detail"], "A job description is required.")
 
     def test_empty_job_description_returns_bad_request(self):
+        status, body = post_match({"job_description": ""}, [("resume", *self.valid_file)])
+        self.assertEqual(status, 400)
+        self.assertEqual(body["detail"], "A job description is required.")
+
+    def test_whitespace_job_description_returns_bad_request(self):
         status, body = post_match({"job_description": "   "}, [("resume", *self.valid_file)])
         self.assertEqual(status, 400)
         self.assertIn("required", body["detail"])

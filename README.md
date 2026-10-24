@@ -4,7 +4,7 @@ A small FastAPI and Streamlit application that extracts text from a PDF resume a
 
 ## Run locally
 
-Requires Python 3.10 or later.
+Requires Python 3.11. The direct dependencies and model-loading stack are pinned in `requirements.txt`; the Hugging Face versions are kept together because Sentence Transformers relies on their APIs. PyArrow is pinned to a build compatible with the project's NumPy 1.24.3 pin. This is a pinned requirements set rather than a hash lock file, so pip still resolves compatible lower-level transitive packages.
 
 ```bash
 git clone https://github.com/KozmikLojik/ai-resume-screener.git
@@ -39,7 +39,15 @@ After installing the requirements and activating the virtual environment, run:
 python -m unittest discover -s tests -v
 ```
 
-The tests use synthetic PDF content and mocked embeddings; they do not process personal résumés or evaluate real-world model accuracy.
+The unit tests use synthetic PDF content and mocked embeddings; they do not process personal résumés or evaluate real-world model accuracy. The `/match` API returns HTTP 400 with the same required-field message when the job description is missing, empty, or whitespace-only.
+
+To explicitly test the downloaded pretrained model with synthetic text (the first run downloads model files), set the integration flag and run:
+
+```bash
+RUN_MODEL_INTEGRATION=1 python -m unittest tests.test_model_integration -v
+```
+
+In PowerShell, set the flag with `$env:RUN_MODEL_INTEGRATION="1"` before running the command. This integration check verifies that a related synthetic role scores above an unrelated one; it does not measure hiring accuracy.
 
 ## Deployment configuration
 

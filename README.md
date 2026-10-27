@@ -59,7 +59,7 @@ Deploy the API and Streamlit interface as separate services. For a container hos
 | API | `HOST` | `0.0.0.0` (already set by the Docker image) |
 | Streamlit | `RESUME_API_URL` | The public API base URL, without `/match`, for example `https://your-api.onrender.com` |
 
-The API loads the sentence-transformer model when the service starts. Allow time and memory for the model download and initialization. Do not expose resume contents or secrets in logs. A successful build or `/health` response alone does not verify the upload-to-report workflow; test that workflow before sharing the deployment.
+The API loads the sentence-transformer model when the service starts. Allow time and memory for the model download and initialization. The deployment Dockerfile installs the CPU-only PyTorch wheel to avoid downloading GPU/CUDA libraries; this reduces unnecessary image size but does not guarantee the model will fit within a 512 MB memory limit. Do not expose resume contents or secrets in logs. A successful build or `/health` response alone does not verify the upload-to-report workflow; test that workflow before sharing the deployment.
 
 ## Docker
 
